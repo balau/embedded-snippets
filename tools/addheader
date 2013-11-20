@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Copyright (c) 2013 Francesco Balducci
 #
@@ -17,16 +18,50 @@
 #    along with embedded-snippets.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ES_ROOT = ../../
+PROGRAM=$0
 
-CFLAGS += -I$(ES_ROOT)include/fsm/
+print_usage() {
+    cat <<USAGE
+Usage:
+$0 header_file files...
+USAGE
+}
 
-fsm_test: fsm_test.o $(ES_ROOT)src/fsm/fsm.o
+print_err() {
+    echo "$PROGRAM: $1" >/dev/stderr
+}
 
-fsm_test.o: $(ES_ROOT)include/fsm/fsm.h
+exit_err() {
+    print_err "$1"
+    exit 1
+}
 
-$(ES_ROOT)src/fsm/fsm.o: $(ES_ROOT)include/fsm/fsm.h
+exit_usage() {
+    print_err "$1"
+    print_usage
+    exit 1
+}
 
-clean:
-	rm -rf $(ES_ROOT)src/fsm/fsm.o fsm_test.o fsm_test
+test $# -ge 2 || exit_usage "Too few parameters."
+
+HEADER=$1
+test -f $1 || exit_err "$1: No such file."
+
+shift 1
+
+OUTLIST=$*
+
+for OUTFILE in $OUTLIST
+do
+    if [ ! -f $OUTFILE ]
+    then
+        print_err "$OUTFILE: No such file."
+        continue
+    fi
+    TMPFILE=`mktemp`
+    cp $OUTFILE $TMPFILE
+    cat $HEADER $TMPFILE > $OUTFILE
+    rm $TMPFILE
+done
+#TODO: rm $TMPFILE on errors/interrupts
 
