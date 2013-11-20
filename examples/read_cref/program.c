@@ -21,7 +21,7 @@
 
 int main()
 {
-    module1_func1(0);
+    printf("hello %d\n", module1_func1(0));
     module1_func1(module2_var2);
     module2_func1(module2_var1);
     module2_func2(0);

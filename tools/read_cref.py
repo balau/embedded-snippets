@@ -20,9 +20,10 @@
 
 import sys
 import io
-
+from optparse import OptionParser
 import networkx as nx
 import matplotlib.pyplot as plt
+import re
 
 def print_usage():
     print 'read_cref.py <in.map>'
@@ -33,6 +34,13 @@ def init_symbols():
 
 def init_modules():
     return nx.MultiDiGraph()
+
+def exclude_module(name, exclude_modules):
+    for p in exclude_modules:
+        pext = '.*' + p + '.*'
+        if re.match(pext, name):
+            return True
+    return False
 
 def get_symbol(name, symbols):
     if not name in symbols:
@@ -47,8 +55,7 @@ def get_module(name, modules):
 def add_dependency(needed_module, dependent_module, symbol, modules):
     modules.add_edge(dependent_module, needed_module, name=symbol);
 
-def read_cref(inmap):
-    
+def read_cref(inmap, options):
     l = inmap.readline()
     while len(l) > 0:
         words = l.split()
@@ -56,7 +63,6 @@ def read_cref(inmap):
             if words[0] == 'Symbol' and words[1] == 'File':
                 break
         l = inmap.readline()
-    
     symbols = init_symbols()
     modules = init_modules()
     last_symbol = None
@@ -65,14 +71,18 @@ def read_cref(inmap):
     while len(l) > 0:
         words = l.split()
         if len(words) == 2:
-            last_symbol = get_symbol(words[0], symbols)
-            last_module = get_module(words[1], modules)
+            if not exclude_module(words[1], options.exclude_modules):
+                last_symbol = get_symbol(words[0], symbols)
+                last_module = get_module(words[1], modules)
+            else:
+                last_symbol = None
+                last_module = None
         elif len(words) == 1:
             if last_symbol == None or last_module == None:
-                print 'error: ' + l
-                continue
-            module = get_module(words[0], modules)
-            add_dependency(last_module, module, last_symbol, modules)
+                pass
+            elif not exclude_module(words[0], options.exclude_modules):
+                module = get_module(words[0], modules)
+                add_dependency(last_module, module, last_symbol, modules)
         else:
             print 'error: ' + l
         l = inmap.readline()
@@ -85,14 +95,20 @@ def read_cref(inmap):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print_usage()
+    parser = OptionParser(usage='Usage: %prog [options] mapfile')
+    parser.set_defaults(exclude_modules=[])
+    parser.add_option('-e', '--exclude-modules',
+            action='append', dest='exclude_modules', metavar='FILTER',
+            help='ignore modules that match FILTER, expressed as a regular expression.')
+    (options, args) = parser.parse_args()
+    if len(args) != 1:
+        parser.print_usage()
         sys.exit(1)
-    inmap = io.open(sys.argv[1], 'r')
+    inmap = io.open(args[0], 'r')
     l = inmap.readline()
     while len(l) > 0:
         if l.strip() == 'Cross Reference Table':
-            read_cref(inmap)
+            read_cref(inmap, options)
             sys.exit(0)
         l = inmap.readline()
     print 'error: cross reference table not found.'

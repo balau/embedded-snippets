@@ -38,7 +38,8 @@ LDFLAGS += -Xlinker -Map=$(PROGRAM).map -Xlinker -cref
 $(PROGRAM).map: $(PROGRAM)
 CLEAN_LIST += $(PROGRAM).map
 
-LDFLAGS += -static -nostdlib
+LDFLAGS += -static
+#LDFLAGS += -nostdlib
 
 program.o: program.h
 module1.o: program.h
@@ -46,7 +47,7 @@ module2.o: program.h
 
 .PHONY: read_cref
 read_cref: $(PROGRAM).map
-	$(ES_ROOT)/tools/read_cref.py $<
+	$(ES_ROOT)/tools/read_cref.py -e "libc\.a" -e "libgcc.*\.a" -e "crt.*\.o" $<
 
 all: $(PROGRAM)
 all: $(PROGRAM).map
