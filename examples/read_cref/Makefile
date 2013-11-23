@@ -38,20 +38,38 @@ LDFLAGS += -Xlinker -Map=$(PROGRAM).map -Xlinker -cref
 $(PROGRAM).map: $(PROGRAM)
 CLEAN_LIST += $(PROGRAM).map
 
-LDFLAGS += -static
+#LDFLAGS += -static
 #LDFLAGS += -nostdlib
 
 program.o: program.h
 module1.o: program.h
 module2.o: program.h
 
-.PHONY: read_cref
-read_cref: $(PROGRAM).map
-	$(ES_ROOT)/tools/read_cref.py -e "libc\.a" -e "libgcc.*\.a" -e "crt.*\.o" $<
+READ_CREF = $(ES_ROOT)/tools/read_cref.py
+READ_CREF_FLAGS += -e main
+#READ_CREF_FLAGS = -x "libc\.a" -x "libgcc.*\.a" -x "crt.*\.o"
+
+.PHONY: plot
+plot: $(PROGRAM).map
+	$(READ_CREF) $(READ_CREF_FLAGS) $<
+
+%.dot: %.map
+	$(READ_CREF) $(READ_CREF_FLAGS) $< $@
+
+DOT = dot
+DOT_FLAGS = 
+
+#DOT = neato
+#DOT_FLAGS = -Goverlap=scale
+
+%.png: %.dot
+	$(DOT) $(DOT_FLAGS) -Tpng $< -o $@
 
 all: $(PROGRAM)
-all: $(PROGRAM).map
-all: read_cref
+all: $(PROGRAM).png
+#all: plot
+
+CLEAN_LIST += $(PROGRAM).png
 
 SRC_C = $(filter %.c, $(SRC))
 SRC_S = $(filter %.S, $(SRC))

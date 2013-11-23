@@ -25,10 +25,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import re
 
-def print_usage():
-    print 'read_cref.py <in.map>'
-    pass
-
 def init_symbols():
     return []
 
@@ -53,18 +49,38 @@ def get_module(name, modules):
     return name
 
 def add_dependency(needed_module, dependent_module, symbol, modules):
-    modules.add_edge(dependent_module, needed_module, name=symbol);
+    modules.add_edge(dependent_module, needed_module, label=symbol);
+
+def get_cref_from_entry(graph, entry):
+    entry_edges = filter(lambda e: e[2]['label'] == entry, graph.edges(data=True))
+    if len(entry_edges) == 0:
+        print 'error: cannot find entry point %s.' % entry
+        exit(1)
+    entry_node = None
+    for e in entry_edges:
+        if not entry_node:
+            entry_node = e[1]
+        else:
+            if entry_node != e[1]:
+                print 'error: entry point %s ambiguous.' % entry
+                exit(1)
+    print 'entry module (containing entry point): %s (%s)' % (entry_node, entry)
+    nx.set_node_attributes(graph, 'shape', { entry_node: 'doubleoctagon' })
+    nodes = nx.dfs_preorder_nodes(graph, entry_node)
+    return graph.subgraph(nodes)
 
 def read_cref(inmap, options):
-    l = inmap.readline()
-    while len(l) > 0:
+    while True:
+        l = inmap.readline()
+        if len(l) == 0:
+            print 'error: cannot find start of cross reference table.'
+            exit(1)
         words = l.split()
         if len(words) == 2:
             if words[0] == 'Symbol' and words[1] == 'File':
                 break
-        l = inmap.readline()
-    symbols = init_symbols()
-    modules = init_modules()
+    symbols = []
+    modules = nx.MultiDiGraph()
     last_symbol = None
     last_module = None
     l = inmap.readline()
@@ -84,31 +100,43 @@ def read_cref(inmap, options):
                 module = get_module(words[0], modules)
                 add_dependency(last_module, module, last_symbol, modules)
         else:
-            print 'error: ' + l
+            print 'error: syntax of line: ' + l
         l = inmap.readline()
     
-    print '#modules = %d' % (len(modules))
-    print '#symbols = %d' % (len(symbols))
-    nx.draw_spring(modules)
-    plt.show()
-    return
+    print 'modules# = %d' % (len(modules))
+    print 'symbols# = %d' % (len(symbols))
+    return modules
 
+def create_dot(graph, filename):
+    nx.write_dot(graph, filename)
+
+def plot(graph):
+    nx.draw_graphviz(modules, prog='dot')
+    plt.show()
 
 if __name__ == '__main__':
-    parser = OptionParser(usage='Usage: %prog [options] mapfile')
+    parser = OptionParser(usage='Usage: %prog [options] mapfile [out.dot]')
     parser.set_defaults(exclude_modules=[])
-    parser.add_option('-e', '--exclude-modules',
+    parser.add_option('-x', '--exclude-modules',
             action='append', dest='exclude_modules', metavar='FILTER',
             help='ignore modules that match FILTER, expressed as a regular expression.')
+    parser.add_option('-e', '--entry', dest='entry', metavar='ENTRY',
+            help='consider function (or variable) ENTRY as the entry point and compute module dependencies from there.')
     (options, args) = parser.parse_args()
-    if len(args) != 1:
+    if len(args) < 1 or len(args) > 2:
         parser.print_usage()
         sys.exit(1)
     inmap = io.open(args[0], 'r')
     l = inmap.readline()
     while len(l) > 0:
         if l.strip() == 'Cross Reference Table':
-            read_cref(inmap, options)
+            modules = read_cref(inmap, options)
+            if options.entry:
+                modules = get_cref_from_entry(modules, options.entry)
+            if len(args) >= 2:
+                create_dot(modules, args[1])
+            else:
+                plot(modules)
             sys.exit(0)
         l = inmap.readline()
     print 'error: cross reference table not found.'
