@@ -53,28 +53,23 @@ def add_dependency(needed_module, dependent_module, symbol, modules):
 
 def get_entry_module(modules, entry):
     entry_edges = filter(lambda e: e[2]['label'] == entry, modules.edges(data=True))
-    if len(entry_edges) == 0:
-        print 'error: cannot find entry point %s.' % entry
-        exit(1)
-    entry_node = None
+    entry_module = None
     for e in entry_edges:
-        if not entry_node:
-            entry_node = e[1]
+        if not entry_module:
+            entry_module = e[1]
         else:
-            if entry_node != e[1]:
-                print 'error: entry point %s ambiguous.' % entry
-                exit(1)
-    nx.set_node_attributes(modules, 'shape', { entry_node: 'doubleoctagon' })
-    print 'entry module (containing entry point): %s (%s)' % (entry_node, entry)
-    return entry_node
+            if entry_module != e[1]:
+                # error: entry point is ambiguous.
+                return None
+    return entry_module
 
-def get_cref_from_entry_node(modules, entry_node):
-    nodes = nx.dfs_preorder_nodes(modules, entry_node)
+def get_cref_from_entry_module(modules, entry_module):
+    nodes = nx.dfs_preorder_nodes(modules, entry_module)
     return modules.subgraph(nodes)
 
 def get_cref_from_entry(modules, entry):
-    entry_node = get_entry_module(modules, entry)
-    return get_cref_from_entry_node(modules, entry_node)
+    entry_module = get_entry_module(modules, entry)
+    return get_cref_from_entry_module(modules, entry_module)
     
 def get_cref_excluding_modules(modules, exclude_modules):
     nodes = filter(lambda n: not exclude_module(n, exclude_modules), modules.nodes())
@@ -138,10 +133,19 @@ if __name__ == '__main__':
     while len(l) > 0:
         if l.strip() == 'Cross Reference Table':
             modules = read_cref(inmap, options)
+            entry_module = None
             if options.entry:
-                modules = get_cref_from_entry(modules, options.entry)
+                entry_module = get_entry_module(modules, options.entry)
+                if entry_module:
+                    print 'entry module (containing entry point): %s (%s)' % (entry_module, options.entry)
+                else:
+                    print 'error: cannot find entry point %s.' % entry
+                    exit(1)
             if options.exclude_modules:
-                modules = get_cref_excluding_modules(modules, options.exclude_modules) 
+                modules = get_cref_excluding_modules(modules, options.exclude_modules)
+            if entry_module:
+                nx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
+                modules = get_cref_from_entry_module(modules, entry_module)
             if len(args) >= 2:
                 create_dot(modules, args[1])
             else:
