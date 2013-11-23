@@ -25,29 +25,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import re
 
-def init_symbols():
-    return []
-
-def init_modules():
-    return nx.MultiDiGraph()
-
-def exclude_module(name, exclude_modules):
-    for p in exclude_modules:
-        pext = '.*' + p + '.*'
-        if re.match(pext, name):
-            return True
-    return False
-
-def get_symbol(name, symbols):
-    if not name in symbols:
-        symbols.append(name)
-    return name
-
-def get_module(name, modules):
-    if not modules.has_node(name):
-        modules.add_node(name)
-    return name
-
 def add_dependency(needed_module, dependent_module, symbol, modules):
     modules.add_edge(dependent_module, needed_module, label=symbol);
 
@@ -72,7 +49,11 @@ def get_cref_from_entry(modules, entry):
     return get_cref_from_entry_module(modules, entry_module)
     
 def get_cref_excluding_modules(modules, exclude_modules):
-    nodes = filter(lambda n: not exclude_module(n, exclude_modules), modules.nodes())
+    nodes = filter(
+            lambda n: not any(map(
+                lambda p: re.match('.*' + p + '.*', n),
+                exclude_modules)),
+            modules.nodes())
     return modules.subgraph(nodes)
 
 def read_cref(inmap, options):
@@ -85,7 +66,6 @@ def read_cref(inmap, options):
         if len(words) == 2:
             if words[0] == 'Symbol' and words[1] == 'File':
                 break
-    symbols = []
     modules = nx.MultiDiGraph()
     last_symbol = None
     last_module = None
@@ -93,20 +73,19 @@ def read_cref(inmap, options):
     while len(l) > 0:
         words = l.split()
         if len(words) == 2:
-            last_symbol = get_symbol(words[0], symbols)
-            last_module = get_module(words[1], modules)
+            last_symbol = words[0]
+            last_module = words[1]
+            if not last_module in modules: modules.add_node(last_module)
         elif len(words) == 1:
             if last_symbol == None or last_module == None:
                 pass
             else:
-                module = get_module(words[0], modules)
+                module = words[0]
+                if not module in modules: modules.add_node(module)
                 add_dependency(last_module, module, last_symbol, modules)
         else:
             print 'error: syntax of line: ' + l
         l = inmap.readline()
-    
-    print 'modules# = %d' % (len(modules))
-    print 'symbols# = %d' % (len(symbols))
     return modules
 
 def create_dot(graph, filename):
