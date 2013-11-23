@@ -18,11 +18,11 @@
 #    along with embedded-snippets.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys
-import io
+from sys import exit
+from io import open
 from optparse import OptionParser
-import re
-import networkx as nx
+from re import match
+import networkx
 
 def get_entry_module(modules, entry):
     entry_edges = filter(lambda e: e[2]['label'] == entry, modules.edges(data=True))
@@ -32,7 +32,7 @@ def get_entry_module(modules, entry):
     return entry_modules.pop()
 
 def get_cref_from_entry_module(modules, entry_module):
-    nodes = nx.dfs_preorder_nodes(modules, entry_module)
+    nodes = networkx.dfs_preorder_nodes(modules, entry_module)
     return modules.subgraph(nodes)
 
 def get_cref_from_entry(modules, entry):
@@ -42,7 +42,7 @@ def get_cref_from_entry(modules, entry):
 def get_cref_excluding_modules(modules, exclude_modules):
     nodes = filter(
             lambda n: not any(map(
-                lambda p: re.match('.*' + p + '.*', n),
+                lambda p: match('.*' + p + '.*', n),
                 exclude_modules)),
             modules.nodes())
     return modules.subgraph(nodes)
@@ -57,7 +57,7 @@ def read_cref(inmap, options):
         if len(words) == 2:
             if words[0] == 'Symbol' and words[1] == 'File':
                 break
-    modules = nx.MultiDiGraph()
+    modules = networkx.MultiDiGraph()
     last_symbol = None
     last_module = None
     l = inmap.readline()
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.print_usage()
-        sys.exit(1)
-    inmap = io.open(args[0], 'r')
+        exit(1)
+    inmap = open(args[0], 'r')
     l = inmap.readline()
     while len(l) > 0:
         if l.strip() == 'Cross Reference Table':
@@ -105,11 +105,11 @@ if __name__ == '__main__':
             if options.exclude_modules:
                 modules = get_cref_excluding_modules(modules, options.exclude_modules)
             if entry_module:
-                nx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
+                networkx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
                 modules = get_cref_from_entry_module(modules, entry_module)
-            nx.write_dot(modules, args[1])
-            sys.exit(0)
+            networkx.write_dot(modules, args[1])
+            exit(0)
         l = inmap.readline()
     print 'error: cross reference table not found.'
-    sys.exit(1)
+    exit(1)
 
