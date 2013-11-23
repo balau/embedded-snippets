@@ -21,24 +21,15 @@
 import sys
 import io
 from optparse import OptionParser
-import networkx as nx
-import matplotlib.pyplot as plt
 import re
-
-def add_dependency(needed_module, dependent_module, symbol, modules):
-    modules.add_edge(dependent_module, needed_module, label=symbol);
+import networkx as nx
 
 def get_entry_module(modules, entry):
     entry_edges = filter(lambda e: e[2]['label'] == entry, modules.edges(data=True))
-    entry_module = None
-    for e in entry_edges:
-        if not entry_module:
-            entry_module = e[1]
-        else:
-            if entry_module != e[1]:
-                # error: entry point is ambiguous.
-                return None
-    return entry_module
+    entry_modules = set(map(lambda e: e[1], entry_edges))
+    if len(entry_modules) != 1:
+        return None
+    return entry_modules.pop()
 
 def get_cref_from_entry_module(modules, entry_module):
     nodes = nx.dfs_preorder_nodes(modules, entry_module)
@@ -77,26 +68,17 @@ def read_cref(inmap, options):
             last_module = words[1]
             if not last_module in modules: modules.add_node(last_module)
         elif len(words) == 1:
-            if last_symbol == None or last_module == None:
-                pass
-            else:
+            if last_symbol:
                 module = words[0]
                 if not module in modules: modules.add_node(module)
-                add_dependency(last_module, module, last_symbol, modules)
+                modules.add_edge(module, last_module, label=last_symbol);
         else:
             print 'error: syntax of line: ' + l
         l = inmap.readline()
     return modules
 
-def create_dot(graph, filename):
-    nx.write_dot(graph, filename)
-
-def plot(graph):
-    nx.draw_graphviz(modules, prog='dot')
-    plt.show()
-
 if __name__ == '__main__':
-    parser = OptionParser(usage='Usage: %prog [options] mapfile [out.dot]')
+    parser = OptionParser(usage='Usage: %prog [options] mapfile out.dot')
     parser.set_defaults(exclude_modules=[])
     parser.add_option('-x', '--exclude-modules',
             action='append', dest='exclude_modules', metavar='FILTER',
@@ -104,7 +86,7 @@ if __name__ == '__main__':
     parser.add_option('-e', '--entry', dest='entry', metavar='ENTRY',
             help='consider function (or variable) ENTRY as the entry point and compute module dependencies from there.')
     (options, args) = parser.parse_args()
-    if len(args) < 1 or len(args) > 2:
+    if len(args) != 2:
         parser.print_usage()
         sys.exit(1)
     inmap = io.open(args[0], 'r')
@@ -125,10 +107,7 @@ if __name__ == '__main__':
             if entry_module:
                 nx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
                 modules = get_cref_from_entry_module(modules, entry_module)
-            if len(args) >= 2:
-                create_dot(modules, args[1])
-            else:
-                plot(modules)
+            nx.write_dot(modules, args[1])
             sys.exit(0)
         l = inmap.readline()
     print 'error: cross reference table not found.'
