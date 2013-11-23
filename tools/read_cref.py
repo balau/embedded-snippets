@@ -51,8 +51,8 @@ def get_module(name, modules):
 def add_dependency(needed_module, dependent_module, symbol, modules):
     modules.add_edge(dependent_module, needed_module, label=symbol);
 
-def get_cref_from_entry(graph, entry):
-    entry_edges = filter(lambda e: e[2]['label'] == entry, graph.edges(data=True))
+def get_entry_module(modules, entry):
+    entry_edges = filter(lambda e: e[2]['label'] == entry, modules.edges(data=True))
     if len(entry_edges) == 0:
         print 'error: cannot find entry point %s.' % entry
         exit(1)
@@ -64,10 +64,21 @@ def get_cref_from_entry(graph, entry):
             if entry_node != e[1]:
                 print 'error: entry point %s ambiguous.' % entry
                 exit(1)
+    nx.set_node_attributes(modules, 'shape', { entry_node: 'doubleoctagon' })
     print 'entry module (containing entry point): %s (%s)' % (entry_node, entry)
-    nx.set_node_attributes(graph, 'shape', { entry_node: 'doubleoctagon' })
-    nodes = nx.dfs_preorder_nodes(graph, entry_node)
-    return graph.subgraph(nodes)
+    return entry_node
+
+def get_cref_from_entry_node(modules, entry_node):
+    nodes = nx.dfs_preorder_nodes(modules, entry_node)
+    return modules.subgraph(nodes)
+
+def get_cref_from_entry(modules, entry):
+    entry_node = get_entry_module(modules, entry)
+    return get_cref_from_entry_node(modules, entry_node)
+    
+def get_cref_excluding_modules(modules, exclude_modules):
+    nodes = filter(lambda n: not exclude_module(n, exclude_modules), modules.nodes())
+    return modules.subgraph(nodes)
 
 def read_cref(inmap, options):
     while True:
@@ -87,16 +98,12 @@ def read_cref(inmap, options):
     while len(l) > 0:
         words = l.split()
         if len(words) == 2:
-            if not exclude_module(words[1], options.exclude_modules):
-                last_symbol = get_symbol(words[0], symbols)
-                last_module = get_module(words[1], modules)
-            else:
-                last_symbol = None
-                last_module = None
+            last_symbol = get_symbol(words[0], symbols)
+            last_module = get_module(words[1], modules)
         elif len(words) == 1:
             if last_symbol == None or last_module == None:
                 pass
-            elif not exclude_module(words[0], options.exclude_modules):
+            else:
                 module = get_module(words[0], modules)
                 add_dependency(last_module, module, last_symbol, modules)
         else:
@@ -133,6 +140,8 @@ if __name__ == '__main__':
             modules = read_cref(inmap, options)
             if options.entry:
                 modules = get_cref_from_entry(modules, options.entry)
+            if options.exclude_modules:
+                modules = get_cref_excluding_modules(modules, options.exclude_modules) 
             if len(args) >= 2:
                 create_dot(modules, args[1])
             else:
