@@ -47,21 +47,26 @@ def get_cref_excluding_modules(modules, exclude_modules):
             modules.nodes())
     return modules.subgraph(nodes)
 
-def read_cref(inmap, options):
+def find_cref(inmap):
     while True:
         l = inmap.readline()
-        if len(l) == 0:
-            print 'error: cannot find start of cross reference table.'
-            exit(1)
+        if l.strip() == 'Cross Reference Table':
+            break;
+        if len(l) == 0: return False
+    while True:
+        l = inmap.readline()
+        if len(l) == 0: return False
         words = l.split()
         if len(words) == 2:
             if words[0] == 'Symbol' and words[1] == 'File':
-                break
+                return True
+
+def read_cref(inmap):
     modules = networkx.MultiDiGraph()
     last_symbol = None
     last_module = None
-    l = inmap.readline()
-    while len(l) > 0:
+    while True:
+        l = inmap.readline()
         words = l.split()
         if len(words) == 2:
             last_symbol = words[0]
@@ -72,9 +77,10 @@ def read_cref(inmap, options):
                 module = words[0]
                 if not module in modules: modules.add_node(module)
                 modules.add_edge(module, last_module, label=last_symbol);
+        elif len(l) == 0:
+            return modules
         else:
             print 'error: syntax of line: ' + l
-        l = inmap.readline()
     return modules
 
 if __name__ == '__main__':
@@ -90,26 +96,22 @@ if __name__ == '__main__':
         parser.print_usage()
         exit(1)
     inmap = open(args[0], 'r')
-    l = inmap.readline()
-    while len(l) > 0:
-        if l.strip() == 'Cross Reference Table':
-            modules = read_cref(inmap, options)
-            entry_module = None
-            if options.entry:
-                entry_module = get_entry_module(modules, options.entry)
-                if entry_module:
-                    print 'entry module (containing entry point): %s (%s)' % (entry_module, options.entry)
-                else:
-                    print 'error: cannot find entry point %s.' % entry
-                    exit(1)
-            if options.exclude_modules:
-                modules = get_cref_excluding_modules(modules, options.exclude_modules)
-            if entry_module:
-                networkx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
-                modules = get_cref_from_entry_module(modules, entry_module)
-            networkx.write_dot(modules, args[1])
-            exit(0)
-        l = inmap.readline()
-    print 'error: cross reference table not found.'
-    exit(1)
+    if not find_cref(inmap):
+        print 'error: cross reference table not found.'
+        exit(1)
+    modules = read_cref(inmap)
+    if options.entry:
+        entry_module = get_entry_module(modules, options.entry)
+        if entry_module:
+            print 'entry module (containing entry point): %s (%s)' % (entry_module, options.entry)
+        else:
+            print 'error: cannot find entry point %s.' % entry
+            exit(1)
+    if options.exclude_modules:
+        modules = get_cref_excluding_modules(modules, options.exclude_modules)
+    if entry_module:
+        networkx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
+        modules = get_cref_from_entry_module(modules, entry_module)
+    networkx.write_dot(modules, args[1])
+    exit(0)
 
