@@ -100,6 +100,7 @@ if __name__ == '__main__':
         print 'error: cross reference table not found.'
         exit(1)
     modules = read_cref(inmap)
+    entry_module = None
     if options.entry:
         entry_module = get_entry_module(modules, options.entry)
         if entry_module:
