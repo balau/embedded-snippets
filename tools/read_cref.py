@@ -83,6 +83,14 @@ def read_cref(inmap):
             print 'error: syntax of line: ' + l
     return modules
 
+def get_collapsed(modules):
+    collapsed = networkx.MultiDiGraph()
+    collapsed.add_nodes_from(modules.nodes())
+    for e in modules.edges():
+        if not e in collapsed.edges():
+            collapsed.add_edge(e[0], e[1])
+    return collapsed
+
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] mapfile out.dot')
     parser.set_defaults(exclude_modules=[])
@@ -91,6 +99,9 @@ if __name__ == '__main__':
             help='ignore modules that match FILTER, expressed as a regular expression.')
     parser.add_option('-e', '--entry', dest='entry', metavar='ENTRY',
             help='consider function (or variable) ENTRY as the entry point and compute module dependencies from there.')
+    parser.add_option('-c', '--collapse-symbols',
+            action='store_true', dest='collapse_symbols', default=False,
+            help='Collapse symbols information, displaying only dependencies between modules.')
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.print_usage()
@@ -113,6 +124,8 @@ if __name__ == '__main__':
     if entry_module:
         networkx.set_node_attributes(modules, 'shape', { entry_module: 'doubleoctagon' })
         modules = get_cref_from_entry_module(modules, entry_module)
+    if options.collapse_symbols:
+        modules = get_collapsed(modules)
     networkx.write_dot(modules, args[1])
     exit(0)
 
