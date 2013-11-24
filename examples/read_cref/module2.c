@@ -19,8 +19,8 @@
 
 #include "program.h"
 
-int module2_var1;
-int module2_var2;
+int module2_var1 = 1;
+int module2_var2 = 2;
 
 int module2_func1(int a)
 {
