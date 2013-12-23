@@ -19,8 +19,8 @@
 
 #include "pool.h"
 
-#define POOL_FLAG_FREE 0
-#define POOL_FLAG_BUSY 1
+#define POOL_FLAG_FREE ((pool_flag_T)0)
+#define POOL_FLAG_BUSY ((pool_flag_T)1)
 
 void pool_init(
         struct pool *p,
