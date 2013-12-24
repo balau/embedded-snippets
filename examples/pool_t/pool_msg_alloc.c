@@ -17,31 +17,6 @@
  *    along with embedded-snippets.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-
 #include "pool_msg.h"
-
-#define N_MSGS 10
-
-int main(void) {
-    struct pool_msg *p;
-    struct msg *m;
-    
-    p = pool_msg_alloc(N_MSGS);
-
-    do
-    {
-        int ret;
-        m = pool_msg_reserve(p);
-        printf("m = %p\n", m);
-        m = pool_msg_reserve(p);
-        printf("m = %p\n", m);
-        ret = pool_msg_release(p, m);
-        printf("release: %d\n", ret);
-    } while(m != NULL);
-
-    pool_msg_free(p);
-
-	return 0;
-}
+#include "pool_t_alloc.c"
 

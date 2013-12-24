@@ -66,3 +66,10 @@ int POOL_CREATE_NAME(release)(
     struct POOL_STRUCT_NAME *, /* pool */
     POOL_TYPE *); /* resource */
 
+extern
+struct POOL_STRUCT_NAME *POOL_CREATE_NAME(alloc)(
+        size_t); /* n_resources */
+
+extern
+void POOL_CREATE_NAME(free)(struct POOL_STRUCT_NAME *);
+

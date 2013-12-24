@@ -27,6 +27,7 @@ CFLAGS += $(WFLAGS)
 
 SRC += pool_msg_test.c
 SRC += pool_msg.c
+SRC += pool_msg_alloc.c
 SRC += $(ES_ROOT)src/pool/pool.c
 
 include $(ES_ROOT)tools/common.mk
