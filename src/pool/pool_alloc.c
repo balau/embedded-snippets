@@ -17,45 +17,39 @@
  *    along with embedded-snippets.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-#ifndef POOL_H
-#define POOL_H
-
 #include <stdlib.h>
 
-typedef unsigned char pool_flag_T;
+#include "pool.h"
 
-struct pool
-{
-    size_t size;
-    pool_flag_T *flags;
-    int next_guess;
-    size_t n_avail;
-};
-
-extern
-void pool_init(
-        struct pool *,
-        pool_flag_T *,
-        size_t);
-
-extern
-int pool_isempty(const struct pool *);
-
-extern
-int pool_reserve(struct pool *);
-
-extern
-int pool_release(
-        struct pool *,
-        int); /* index */
-
-extern
 struct pool *pool_alloc(
-        size_t); /* n_resources */
+        size_t n_resources)
+{
+    struct pool *p;
+    pool_flag_T *flags;
+    p = malloc(sizeof(struct pool));
+    if (p != NULL)
+    {
+        flags = malloc(sizeof(pool_flag_T) * n_resources);
+        if (flags != NULL)
+        {
+            pool_init(p, flags, n_resources);
+            return p;
+        }
+        else
+        {
+            free(p);
+            return NULL;
+        }
+    }
+    else
+    {
+        return NULL;
+    }
+}
 
-extern
-void pool_free(struct pool *);
-
-#endif /* POOL_H */
+void pool_free(struct pool *p)
+{
+    free(p->flags);
+    free(p);
+}
 

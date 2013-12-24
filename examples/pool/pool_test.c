@@ -23,18 +23,12 @@
 
 #define N_RESOURCES 10
 
-static
-struct pool pool;
-
-static
-pool_flag_T flags[N_RESOURCES];
-
 int main(void) {
-    struct pool *p = &pool;
+    struct pool *p;
     int i;
     int reserve_i;
 
-    pool_init(p, flags, N_RESOURCES);
+    p = pool_alloc(N_RESOURCES);
 
     for(i = 0; i < N_RESOURCES; i++)
     {
@@ -50,6 +44,8 @@ int main(void) {
     {
         printf("release(%d): %d\n", i, pool_release(p, i));
     }
+    
+    pool_free(p);
 
 	return 0;
 }
