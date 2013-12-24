@@ -30,7 +30,7 @@ struct pool
     size_t size;
     pool_flag_T *flags;
     int next_guess;
-    size_t n_free;
+    size_t n_avail;
 };
 
 extern
@@ -43,10 +43,10 @@ extern
 int pool_isempty(const struct pool *);
 
 extern
-int pool_alloc(struct pool *);
+int pool_reserve(struct pool *);
 
 extern
-int pool_free(
+int pool_release(
         struct pool *,
         int);
 

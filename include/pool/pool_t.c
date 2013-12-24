@@ -48,7 +48,7 @@ POOL_TYPE * POOL_CREATE_NAME(reserve)(
 {
     int idx;
 
-    idx = pool_alloc(&p->pool);
+    idx = pool_reserve(&p->pool);
     if(idx >= 0)
     {
         return &p->buffer[idx];
@@ -96,7 +96,7 @@ int POOL_CREATE_NAME(release)(
     {
         int ret;
 
-        ret = pool_free(&p->pool, idx);
+        ret = pool_release(&p->pool, idx);
         if (ret == 0)
         {
             return 0;

@@ -19,8 +19,8 @@
 
 #include "pool.h"
 
-#define POOL_FLAG_FREE ((pool_flag_T)0)
-#define POOL_FLAG_BUSY ((pool_flag_T)1)
+#define POOL_FLAG_AVAIL ((pool_flag_T)0)
+#define POOL_FLAG_BUSY  ((pool_flag_T)1)
 
 void pool_init(
         struct pool *p,
@@ -31,18 +31,18 @@ void pool_init(
 
     for (i = 0; ((size_t)i) < size; i++)
     {
-        flags[i] = POOL_FLAG_FREE;
+        flags[i] = POOL_FLAG_AVAIL;
     }
     p->flags = flags;
     p->size = size;
     p->next_guess = 0;
-    p->n_free = size;
+    p->n_avail = size;
 }
 
 static
-int isfree(const struct pool *p, int idx)
+int isavail(const struct pool *p, int idx)
 {
-    return (p->flags[idx] == POOL_FLAG_FREE)?1:0;
+    return (p->flags[idx] == POOL_FLAG_AVAIL)?1:0;
 }
 
 static
@@ -56,10 +56,10 @@ int incr(const struct pool *p, int idx)
 
 int pool_isempty(const struct pool *p)
 {
-    return (p->n_free == 0)?1:0;
+    return (p->n_avail == 0)?1:0;
 }
 
-int pool_alloc(struct pool *p)
+int pool_reserve(struct pool *p)
 {
     int i = p->next_guess;
     if(pool_isempty(p) != 0)
@@ -68,28 +68,28 @@ int pool_alloc(struct pool *p)
     }
     else
     {
-        while(isfree(p, i) == 0)
+        while(isavail(p, i) == 0)
         {
             i = incr(p, i);
         }
         p->flags[i] = POOL_FLAG_BUSY;
-        p->n_free--;
+        p->n_avail--;
         p->next_guess = incr(p, i);
         return i;
     }
 }
 
-int pool_free(
+int pool_release(
         struct pool *p,
         int idx)
 {
     if ((idx >= 0) && (((size_t)idx) < p->size))
     {
-        if(isfree(p, idx) == 0)
+        if(isavail(p, idx) == 0)
         {
-            p->n_free++;
+            p->n_avail++;
             p->next_guess = idx;
-            p->flags[idx] = POOL_FLAG_FREE;
+            p->flags[idx] = POOL_FLAG_AVAIL;
             return 0;
         }
         else
