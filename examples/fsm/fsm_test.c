@@ -71,13 +71,19 @@ int entry_action_rx(const struct fsm_T *fsm, void *ptr)
 
 struct fsm_T fsm;
 
+const int STATE_OUT = N_STATES;
+
 int main()
 {
 	int i;
+	int nState;
+
 	fsm_init(&fsm, actions, entry_actions, FSM_NO_ACTIONS, N_STATES, ST_INIT);
 	for(i = 0; i < 10; i++)
+	while(nState != STATE_OUT)
 	{
 		fsm_step(&fsm, 0);
+		nState = fsm_get_state(&fsm);
 	}
 	return 0;
 }

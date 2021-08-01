@@ -19,6 +19,9 @@
 
 #include "fsm.h"
 
+#define OUT_OF_RANGE_STATE(state,min,max)\
+ ((state<min)||(((unsigned int)state)>=max))
+
 void fsm_init(
 		struct fsm_T *fsm,
 		const fsm_action_T *actions,
@@ -58,10 +61,10 @@ int fsm_step(struct fsm_T *fsm, void *ptr)
 
 	cur_state = fsm->state;
 	next_state = cur_state;
-	
-	if((cur_state < 0) || (((unsigned int)cur_state) >= fsm->n_states))
+
+        if (OUT_OF_RANGE_STATE(cur_state,0,fsm->n_states))
 	{
-		return_val = FSM_INVALID_STATE;		
+		return_val = FSM_INVALID_STATE;
 	}
 	else
 	{
@@ -74,8 +77,9 @@ int fsm_step(struct fsm_T *fsm, void *ptr)
 		}
 		else
 		{
+			/* Why not test entry_action result before action ? */
 			next_state = action(fsm, ptr);
-			if((next_state < 0) || (((unsigned int)next_state) >= fsm->n_states))
+			if (OUT_OF_RANGE_STATE(next_state,0,fsm->n_states))
 			{
 				return_val = FSM_INVALID_NEXT_STATE;
 				next_state = cur_state;
